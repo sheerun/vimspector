@@ -405,27 +405,26 @@ class DebugSession( object ):
 
   def _Reset( self ):
     self._logger.info( "Debugging complete." )
-    if self._uiTab:
+    if self._HasUI():
       self._logger.debug( "Clearing down UI" )
-
-      del vim.vars[ 'vimspector_session_windows' ]
       vim.current.tabpage = self._uiTab
-
       self._splash_screen = utils.HideSplash( self._api_prefix,
                                               self._splash_screen )
-
       self._stackTraceView.Reset()
       self._variablesView.Reset()
       self._outputView.Reset()
       self._codeView.Reset()
+      vim.command( 'au! VimspectorReset TabClose <buffer>' )
       vim.command( 'tabclose!' )
-      vim.command( 'doautocmd <nomodeline> User VimspectorDebugEnded' )
-      self._stackTraceView = None
-      self._variablesView = None
-      self._outputView = None
-      self._codeView = None
-      self._remote_term = None
-      self._uiTab = None
+
+    del vim.vars[ 'vimspector_session_windows' ]
+    vim.command( 'doautocmd <nomodeline> User VimspectorDebugEnded' )
+    self._stackTraceView = None
+    self._variablesView = None
+    self._outputView = None
+    self._codeView = None
+    self._remote_term = None
+    self._uiTab = None
 
     # make sure that we're displaying signs in any still-open buffers
     self._breakpoints.UpdateUI()
@@ -668,6 +667,10 @@ class DebugSession( object ):
   def _SetUpUI( self ):
     vim.command( 'tab split' )
     self._uiTab = vim.current.tabpage
+    vim.command( 'augroup VimspectorReset' )
+    vim.command( 'au TabClosed <buffer> call vimspector#Reset()' )
+    vim.command( 'augroup END' )
+
 
     mode = settings.Get( 'ui_mode' )
 
