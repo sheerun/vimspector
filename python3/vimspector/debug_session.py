@@ -897,6 +897,7 @@ class DebugSession( object ):
                                                  self._splash_screen,
                                                  "Unable to start adapter" )
     else:
+      handlers = [ self ]
       if 'custom_handler' in self._adapter:
         spec = self._adapter[ 'custom_handler' ]
         if isinstance( spec, dict ):
@@ -905,10 +906,12 @@ class DebugSession( object ):
         else:
           module, cls = spec.rsplit( '.', 1 )
 
-        CustomHandler = getattr( importlib.import_module( module ), cls )
-        handlers = [ CustomHandler( self ), self ]
-      else:
-        handlers = [ self ]
+        try:
+          CustomHandler = getattr( importlib.import_module( module ), cls )
+          handlers = [ CustomHandler( self ), self ]
+        except ImportError:
+          self._logger.exception( "Unable to load custom adapter %s",
+                                  spec )
 
       self._connection = debug_adapter_connection.DebugAdapterConnection(
         handlers,
