@@ -61,6 +61,7 @@ class DebugSession( object ):
     self._stackTraceView = None
     self._variablesView = None
     self._outputView = None
+    self._codeView = None
     self._breakpoints = breakpoints.ProjectBreakpoints()
     self._splash_screen = None
     self._remote_term = None
@@ -404,27 +405,43 @@ class DebugSession( object ):
       self._Reset()
 
   def _Reset( self ):
+    vim.vars[ 'vimspector_resetting' ] = 1
     self._logger.info( "Debugging complete." )
+
+    def ResetUI():
+      if self._stackTraceView:
+        self._stackTraceView.Reset()
+      if self._variablesView:
+        self._variablesView.Reset()
+      if self._outputView:
+        self._outputView.Reset()
+      if self._codeView:
+        self._codeView.Reset()
+
+      self._stackTraceView = None
+      self._variablesView = None
+      self._outputView = None
+      self._codeView = None
+      self._remote_term = None
+      self._uiTab = None
+
     if self._HasUI():
       self._logger.debug( "Clearing down UI" )
       vim.current.tabpage = self._uiTab
       self._splash_screen = utils.HideSplash( self._api_prefix,
                                               self._splash_screen )
-      self._stackTraceView.Reset()
-      self._variablesView.Reset()
-      self._outputView.Reset()
-      self._codeView.Reset()
-      vim.command( 'au! VimspectorReset TabClose <buffer>' )
+      ResetUI()
       vim.command( 'tabclose!' )
+    else:
+      ResetUI()
 
-    del vim.vars[ 'vimspector_session_windows' ]
+    try:
+      del vim.vars[ 'vimspector_session_windows' ]
+    except KeyError:
+      pass
+
     vim.command( 'doautocmd <nomodeline> User VimspectorDebugEnded' )
-    self._stackTraceView = None
-    self._variablesView = None
-    self._outputView = None
-    self._codeView = None
-    self._remote_term = None
-    self._uiTab = None
+    vim.vars[ 'vimspector_resetting' ] = 0
 
     # make sure that we're displaying signs in any still-open buffers
     self._breakpoints.UpdateUI()
@@ -667,10 +684,6 @@ class DebugSession( object ):
   def _SetUpUI( self ):
     vim.command( 'tab split' )
     self._uiTab = vim.current.tabpage
-    vim.command( 'augroup VimspectorReset' )
-    vim.command( 'au TabClosed <buffer> call vimspector#Reset()' )
-    vim.command( 'augroup END' )
-
 
     mode = settings.Get( 'ui_mode' )
 
