@@ -394,12 +394,12 @@ GADGETS = {
              '${version}/${file_name}',
     },
     'all': {
-      'version': 'v1.6.1',
+      'version': 'v1.6.4',
     },
     'macos': {
       'file_name': 'codelldb-x86_64-darwin.vsix',
       'checksum':
-        'b1c998e7421beea9f3ba21aa5706210bb2249eba93c99b809247ee831075262f',
+        'aa920b7b7d2ad4e9d70086355841b0b4844fb5f62cdea1296904100a1b660776',
       'make_executable': [
         'adapter/codelldb',
         'lldb/bin/debugserver',
@@ -410,7 +410,7 @@ GADGETS = {
     'linux': {
       'file_name': 'codelldb-x86_64-linux.vsix',
       'checksum':
-        'f2a36cb6971fd95a467cf1a7620e160914e8f11bf82929932ee0aa5afbf6ae6a',
+        '',
       'make_executable': [
         'adapter/codelldb',
         'lldb/bin/lldb',
@@ -421,7 +421,7 @@ GADGETS = {
     'windows': {
       'file_name': 'codelldb-x86_64-windows.vsix',
       'checksum':
-        'ca6a6525bf7719dc95265dc630b3cc817a8c0393b756fd242b710805ffdfb940',
+        '',
       'make_executable': []
     },
     'adapters': {
