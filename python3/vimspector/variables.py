@@ -56,6 +56,11 @@ class Expandable:
   def VariablesReference( self ):
     assert False
 
+  @abc.abstractmethod
+  def MemoryReference( self ):
+    assert None
+
+
 
 class Scope( Expandable ):
   """Holds an expandable scope (a DAP scope dict), with expand/collapse state"""
@@ -65,6 +70,9 @@ class Scope( Expandable ):
 
   def VariablesReference( self ):
     return self.scope.get( 'variablesReference', 0 )
+
+  def MemoryReference( self ):
+    return None
 
   def Update( self, scope ):
     self.scope = scope
@@ -80,6 +88,9 @@ class WatchResult( Expandable ):
 
   def VariablesReference( self ):
     return self.result.get( 'variablesReference', 0 )
+
+  def MemoryReference( self ):
+    return self.result.get( 'memoryReference' )
 
   def Update( self, result ):
     self.changed = False
@@ -104,6 +115,9 @@ class Variable( Expandable ):
 
   def VariablesReference( self ):
     return self.variable.get( 'variablesReference', 0 )
+
+  def MemoryReference( self ):
+    return self.variable.get( 'memoryReference' )
 
   def Update( self, variable ):
     self.changed = False
@@ -163,6 +177,10 @@ def AddExpandMappings( mappings = None ):
   for mapping in utils.GetVimList( mappings, 'set_value' ):
     vim.command( f'nnoremap <silent> <buffer> { mapping } '
                  ':<C-u>call vimspector#SetVariableValue()<CR>' )
+  for mapping in utils.GetVimList( mappings, 'read_memory' ):
+    vim.command( f'nnoremap <silent> <buffer> { mapping } '
+                 ':<C-u>call vimspector#ReadMemory()<CR>' )
+
 
 
 class VariablesView( object ):
@@ -187,6 +205,8 @@ class VariablesView( object ):
       if utils.UseWinBar():
         vim.command( 'nnoremenu <silent> 1.1 WinBar.Set '
                      ':call vimspector#SetVariableValue()<CR>' )
+        vim.command( 'nnoremenu <silent> 1.2 WinBar.Memory '
+                     ':call vimspector#ReadMemory()<CR>' )
       AddExpandMappings( mappings )
 
     # Set up the "Watches" buffer in the watches_win (and create a WinBar in
@@ -211,8 +231,10 @@ class VariablesView( object ):
                      ':call vimspector#ExpandVariable()<CR>' )
         vim.command( 'nnoremenu <silent> 1.3 WinBar.Delete '
                      ':call vimspector#DeleteWatch()<CR>' )
-        vim.command( 'nnoremenu <silent> 1.1 WinBar.Set '
+        vim.command( 'nnoremenu <silent> 1.4 WinBar.Set '
                      ':call vimspector#SetVariableValue()<CR>' )
+        vim.command( 'nnoremenu <silent> 1.5 WinBar.Memory '
+                     ':call vimspector#ReadMemory()<CR>' )
 
     # Set the (global!) balloon expr if supported
     has_balloon      = int( vim.eval( "has( 'balloon_eval' )" ) )
@@ -580,6 +602,14 @@ class VariablesView( object ):
     }, failure_handler = failure_handler )
 
 
+  def GetMemoryReference( self, buf = None, line_num = None ):
+    # Get a memoryReference for use in a ReadMemory request
+    variable, _ = self._GetVariable( buf, line_num )
+    if variable is None:
+      return None
+
+    return variable.MemoryReference()
+
 
   def _DrawVariables( self, view, variables, indent, is_short = False ):
     assert indent > 0
@@ -595,10 +625,12 @@ class VariablesView( object ):
           value = variable.variable.get( 'value', '<unknown>' )
         )
       else:
+        marker = 'm' if variable.MemoryReference() is not None else ' '
+        marker += '*' if variable.changed else ' '
         text = '{indent}{marker}{icon} {name} ({type_}): {value}'.format(
           # We borrow 1 space of indent to draw the change marker
           indent = ' ' * ( indent - 1 ),
-          marker = '*' if variable.changed else ' ',
+          marker = marker,
           icon = '+' if ( variable.IsExpandable()
                           and not variable.IsExpanded() ) else '-',
           name = variable.variable.get( 'name', '' ),
